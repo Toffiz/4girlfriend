@@ -45,7 +45,7 @@ const OurLoveStory = () => {
       setCurrentQuote((prev) => (prev + 1) % loveQuotes.length);
     }, 4000);
     return () => clearInterval(quoteInterval);
-  }, []);
+  }, [loveQuotes.length]);
 
   // Generate floating hearts
   useEffect(() => {
