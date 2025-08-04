@@ -47,12 +47,12 @@ const OurLoveStory = () => {
     return () => clearInterval(quoteInterval);
   }, [loveQuotes.length]);
 
-  // Generate floating hearts
+  // Generate floating hearts - optimized
   useEffect(() => {
     const heartInterval = setInterval(() => {
       setShowHearts(true);
-      setTimeout(() => setShowHearts(false), 3000);
-    }, 5000);
+      setTimeout(() => setShowHearts(false), 2000); // Reduced duration
+    }, 8000); // Increased interval for better performance
     return () => clearInterval(heartInterval);
   }, []);
 
@@ -64,14 +64,14 @@ const OurLoveStory = () => {
 
   return (
     <div className="love-story-container">
-      {/* Floating Hearts */}
+      {/* Floating Hearts - Optimized */}
       {showHearts && (
         <div className="floating-hearts">
-          {[...Array(15)].map((_, i) => (
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="floating-heart" style={{
               left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 2}s`,
-              fontSize: `${1 + Math.random() * 1.5}rem`
+              animationDelay: `${Math.random() * 1}s`,
+              fontSize: `${1.2 + Math.random() * 0.8}rem`
             }}>
               💖
             </div>

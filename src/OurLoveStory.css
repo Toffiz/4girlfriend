@@ -23,7 +23,7 @@
   z-index: -2;
 }
 
-/* Floating Hearts Animation */
+/* Floating Hearts Animation - Optimized */
 .floating-hearts {
   position: fixed;
   top: 0;
@@ -36,23 +36,24 @@
 
 .floating-heart {
   position: absolute;
-  animation: floatUp 3s ease-out forwards;
-  opacity: 0.8;
+  animation: floatUp 2s ease-out forwards;
+  opacity: 0.7;
+  will-change: transform, opacity; /* Optimize for animations */
 }
 
 @keyframes floatUp {
   0% {
-    transform: translateY(100vh) rotate(0deg);
+    transform: translate3d(0, 100vh, 0) rotate(0deg);
     opacity: 0;
   }
-  10% {
-    opacity: 1;
+  15% {
+    opacity: 0.8;
   }
-  90% {
-    opacity: 1;
+  85% {
+    opacity: 0.8;
   }
   100% {
-    transform: translateY(-100px) rotate(360deg);
+    transform: translate3d(0, -50px, 0) rotate(180deg);
     opacity: 0;
   }
 }
