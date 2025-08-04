@@ -1,5 +1,5 @@
 import React from 'react';
-import FlowerGarden from '../FlowerGarden';
+import FlowerGarden from './FlowerGarden';
 
 function App() {
   return (
