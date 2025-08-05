@@ -14,9 +14,9 @@ const OurLoveStory = ({ onLogout }) => {
       const now = new Date();
       const timeDiff = now - startDate;
       
-      const years = Math.floor(timeDiff / (1000 * 60 * 60 * 24 * 365));
-      const months = Math.floor((timeDiff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
-      const days = Math.floor((timeDiff % (1000 * 60 * 60 * 24 * 30)) / (1000 * 60 * 60 * 24));
+      const years = Math.floor(timeDiff / (1000 * 60 * 60 * 24 * 365.25));
+      const months = Math.floor((timeDiff % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.44));
+      const days = Math.floor((timeDiff % (1000 * 60 * 60 * 24 * 30.44)) / (1000 * 60 * 60 * 24));
       const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
@@ -25,9 +25,31 @@ const OurLoveStory = ({ onLogout }) => {
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(updateTime, 1000); // Update every second for timer effect
     return () => clearInterval(interval);
   }, []);
+
+  // Calculate birthday countdowns
+  const calculateBirthdayCountdown = (month, day, name) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    let birthday = new Date(currentYear, month - 1, day); // month is 0-indexed
+    
+    // If birthday already passed this year, calculate for next year
+    if (birthday < now) {
+      birthday = new Date(currentYear + 1, month - 1, day);
+    }
+    
+    const timeDiff = birthday - now;
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { name, days, hours, minutes, date: birthday };
+  };
+
+  const danielBirthday = calculateBirthdayCountdown(11, 2, "Daniel's Birthday"); // Nov 2
+  const albinaBirthday = calculateBirthdayCountdown(12, 24, "Albina's Birthday"); // Dec 24
 
   // Love quotes rotation
   const loveQuotes = [
@@ -129,9 +151,36 @@ const OurLoveStory = ({ onLogout }) => {
             <div className="time-number">{timeData.minutes || 0}</div>
             <div className="time-label">Minutes</div>
           </div>
-          <div className="time-box">
+          <div className="time-box timer-seconds">
             <div className="time-number">{timeData.seconds || 0}</div>
             <div className="time-label">Seconds</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Birthday Countdown */}
+      <section className="birthday-countdown">
+        <h2 className="section-title">Upcoming Birthdays 🎂</h2>
+        <div className="birthday-grid">
+          <div className="birthday-card">
+            <div className="birthday-icon">🎉</div>
+            <div className="birthday-name">{danielBirthday.name}</div>
+            <div className="birthday-date">November 2nd</div>
+            <div className="birthday-countdown-time">
+              <span className="countdown-number">{danielBirthday.days}</span> days
+              <span className="countdown-number">{danielBirthday.hours}</span> hours
+              <span className="countdown-number">{danielBirthday.minutes}</span> minutes
+            </div>
+          </div>
+          <div className="birthday-card">
+            <div className="birthday-icon">🎂</div>
+            <div className="birthday-name">{albinaBirthday.name}</div>
+            <div className="birthday-date">December 24th</div>
+            <div className="birthday-countdown-time">
+              <span className="countdown-number">{albinaBirthday.days}</span> days
+              <span className="countdown-number">{albinaBirthday.hours}</span> hours
+              <span className="countdown-number">{albinaBirthday.minutes}</span> minutes
+            </div>
           </div>
         </div>
       </section>

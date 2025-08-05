@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { authService } from './supabaseClient';
 import './Login.css';
 
 const Login = ({ onLogin }) => {
@@ -14,9 +15,23 @@ const Login = ({ onLogin }) => {
     password: atob('QWxiaW5h')  // 'Albina' encoded
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     
+    try {
+      // First try Supabase authentication
+      const user = await authService.checkAuth(credentials.username, credentials.password);
+      
+      if (user) {
+        onLogin(true);
+        return;
+      }
+    } catch (error) {
+      console.log('Supabase auth failed, trying local auth:', error);
+    }
+    
+    // Fallback to local authentication
     if (credentials.username === validCredentials.username && 
         credentials.password === validCredentials.password) {
       onLogin(true);

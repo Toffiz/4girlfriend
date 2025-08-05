@@ -845,9 +845,17 @@
   }
 }
 
-/* Romantic Navigation Button */
-.romantic-button {
+/* Navigation Buttons Container */
+.navigation-buttons {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
   margin-top: 2rem;
+}
+
+/* Navigation Buttons */
+.romantic-button, .gallery-button {
   padding: 15px 30px;
   background: linear-gradient(45deg, #ff69b4, #ff1493, #dc143c, #ff69b4);
   background-size: 400% 400%;
@@ -861,9 +869,18 @@
   animation: gradientShift 3s ease-in-out infinite;
 }
 
-.romantic-button:hover {
+.gallery-button {
+  background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #667eea);
+  box-shadow: 0 8px 25px rgba(118, 75, 162, 0.4);
+}
+
+.romantic-button:hover, .gallery-button:hover {
   transform: translateY(-3px) scale(1.05);
   box-shadow: 0 15px 35px rgba(255, 20, 147, 0.6);
+}
+
+.gallery-button:hover {
+  box-shadow: 0 15px 35px rgba(118, 75, 162, 0.6);
 }
 
 .button-text {
@@ -888,7 +905,7 @@
   transition: opacity 0.3s ease;
 }
 
-.romantic-button:hover .button-hearts {
+.romantic-button:hover .button-hearts, .gallery-button:hover .button-hearts {
   opacity: 1;
 }
 

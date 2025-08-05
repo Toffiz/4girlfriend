@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import FlowerGarden from './FlowerGarden';
 import OurLoveStory from './OurLoveStory';
+import Gallery from './Gallery';
 import Login from './Login';
 
 function App() {
@@ -20,6 +21,8 @@ function App() {
     const path = window.location.pathname;
     if (path === '/our-love-story') {
       setCurrentPage('love-story');
+    } else if (path === '/gallery') {
+      setCurrentPage('gallery');
     } else {
       setCurrentPage('home');
     }
@@ -29,6 +32,8 @@ function App() {
       const path = window.location.pathname;
       if (path === '/our-love-story') {
         setCurrentPage('love-story');
+      } else if (path === '/gallery') {
+        setCurrentPage('gallery');
       } else {
         setCurrentPage('home');
       }
@@ -42,6 +47,8 @@ function App() {
   useEffect(() => {
     if (currentPage === 'love-story' && window.location.pathname !== '/our-love-story') {
       window.history.pushState({}, '', '/our-love-story');
+    } else if (currentPage === 'gallery' && window.location.pathname !== '/gallery') {
+      window.history.pushState({}, '', '/gallery');
     } else if (currentPage === 'home' && window.location.pathname !== '/') {
       window.history.pushState({}, '', '/');
     }
@@ -67,7 +74,9 @@ function App() {
 
   return (
     <div className="App">
-      {currentPage === 'home' ? <FlowerGarden onLogout={handleLogout} /> : <OurLoveStory onLogout={handleLogout} />}
+      {currentPage === 'home' && <FlowerGarden onLogout={handleLogout} />}
+      {currentPage === 'love-story' && <OurLoveStory onLogout={handleLogout} />}
+      {currentPage === 'gallery' && <Gallery onLogout={handleLogout} />}
     </div>
   );
 }

@@ -143,21 +143,38 @@ const FlowerGarden = () => {
         <h1 className="love-text">I Love You, My Beautiful Flower! 🌸</h1>
         <p className="love-subtitle">Just like these flowers bloom, my love for you grows infinitely ❤️</p>
         
-        {/* Romantic Navigation Button */}
-        <button 
-          className="romantic-button"
-          onClick={() => {
-            window.history.pushState({}, '', '/our-love-story');
-            window.dispatchEvent(new PopStateEvent('popstate'));
-          }}
-        >
-          <span className="button-text">💕 Our Love Story 💕</span>
-          <div className="button-hearts">
-            <span>💖</span>
-            <span>💝</span>
-            <span>💖</span>
-          </div>
-        </button>
+        {/* Navigation Buttons */}
+        <div className="navigation-buttons">
+          <button 
+            className="romantic-button"
+            onClick={() => {
+              window.history.pushState({}, '', '/our-love-story');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+          >
+            <span className="button-text">💕 Our Love Story 💕</span>
+            <div className="button-hearts">
+              <span>💖</span>
+              <span>💝</span>
+              <span>💖</span>
+            </div>
+          </button>
+
+          <button 
+            className="gallery-button"
+            onClick={() => {
+              window.history.pushState({}, '', '/gallery');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+          >
+            <span className="button-text">📸 Memory Gallery 📸</span>
+            <div className="button-hearts">
+              <span>📷</span>
+              <span>💕</span>
+              <span>📷</span>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

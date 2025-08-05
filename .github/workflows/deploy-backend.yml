@@ -1,0 +1,56 @@
+name: Deploy Backend to Production
+
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - 'backend/**'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  # Environment variables from GitHub Secrets
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}  # 🔐 ONLY SENSITIVE DATA IN SECRETS
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        
+    - name: Test database connection
+      run: |
+        cd backend
+        python -c "
+        from secure_config import DB_CONFIG
+        import psycopg2
+        try:
+            conn = psycopg2.connect(**DB_CONFIG)
+            print('✅ Database connection successful!')
+            conn.close()
+        except Exception as e:
+            print(f'❌ Database connection failed: {e}')
+            exit(1)
+        "
+        
+    # For deployment to platforms like Railway, Heroku, etc.
+    # Add deployment steps here based on your chosen platform
+    
+    - name: Deploy to Railway (example)
+      if: false  # Enable when you're ready to deploy
+      run: |
+        # Install Railway CLI and deploy
+        # railway deploy
+        echo "Ready for deployment to Railway or similar platform"
