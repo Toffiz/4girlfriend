@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './OurLoveStory.css';
 
-const OurLoveStory = () => {
+const OurLoveStory = ({ onLogout }) => {
   const [timeData, setTimeData] = useState({});
   const [currentQuote, setCurrentQuote] = useState(0);
   const [showHearts, setShowHearts] = useState(false);
@@ -86,10 +86,21 @@ const OurLoveStory = () => {
       <header className="love-header">
         <button 
           className="back-button"
-          onClick={() => window.location.href = '/'}
+          onClick={() => {
+            window.history.pushState({}, '', '/');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }}
         >
           🌸 Back to Garden
         </button>
+        {onLogout && (
+          <button 
+            className="logout-button"
+            onClick={onLogout}
+          >
+            🚪 Logout
+          </button>
+        )}
         <h1 className="love-title">Our Love Story 💕</h1>
         <p className="love-date">Since January 27, 2023</p>
       </header>

@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import FlowerGarden from './FlowerGarden';
 import OurLoveStory from './OurLoveStory';
+import Login from './Login';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if user is already authenticated (from localStorage)
+    const authStatus = localStorage.getItem('isAuthenticated');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   useEffect(() => {
     // Simple routing based on URL path
@@ -37,9 +47,27 @@ function App() {
     }
   }, [currentPage]);
 
+  const handleLogin = (success) => {
+    if (success) {
+      setIsAuthenticated(true);
+      localStorage.setItem('isAuthenticated', 'true');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('isAuthenticated');
+    setCurrentPage('home');
+  };
+
+  // If not authenticated, show login page
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div className="App">
-      {currentPage === 'home' ? <FlowerGarden /> : <OurLoveStory />}
+      {currentPage === 'home' ? <FlowerGarden onLogout={handleLogout} /> : <OurLoveStory onLogout={handleLogout} />}
     </div>
   );
 }

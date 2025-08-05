@@ -85,6 +85,26 @@
   box-shadow: 0 8px 25px rgba(255, 20, 147, 0.5);
 }
 
+.logout-button {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(238, 90, 82, 0.3);
+}
+
+.logout-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(238, 90, 82, 0.5);
+}
+
 .love-title {
   font-size: 3.5rem;
   background: linear-gradient(45deg, #ff69b4, #ff1493, #ffd700, #ff69b4);
