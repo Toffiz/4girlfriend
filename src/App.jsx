@@ -18,7 +18,9 @@ function App() {
 
   useEffect(() => {
     // Simple routing based on URL path
-    const path = window.location.pathname;
+    const basename = '/4girlfriend';
+    const path = window.location.pathname.replace(basename, '') || '/';
+    
     if (path === '/our-love-story') {
       setCurrentPage('love-story');
     } else if (path === '/gallery') {
@@ -29,7 +31,7 @@ function App() {
 
     // Listen for navigation
     const handleNavigation = () => {
-      const path = window.location.pathname;
+      const path = window.location.pathname.replace(basename, '') || '/';
       if (path === '/our-love-story') {
         setCurrentPage('love-story');
       } else if (path === '/gallery') {
@@ -45,12 +47,13 @@ function App() {
 
   // Update URL when page changes
   useEffect(() => {
-    if (currentPage === 'love-story' && window.location.pathname !== '/our-love-story') {
-      window.history.pushState({}, '', '/our-love-story');
-    } else if (currentPage === 'gallery' && window.location.pathname !== '/gallery') {
-      window.history.pushState({}, '', '/gallery');
-    } else if (currentPage === 'home' && window.location.pathname !== '/') {
-      window.history.pushState({}, '', '/');
+    const basename = '/4girlfriend';
+    if (currentPage === 'love-story' && window.location.pathname !== basename + '/our-love-story') {
+      window.history.pushState({}, '', basename + '/our-love-story');
+    } else if (currentPage === 'gallery' && window.location.pathname !== basename + '/gallery') {
+      window.history.pushState({}, '', basename + '/gallery');
+    } else if (currentPage === 'home' && window.location.pathname !== basename) {
+      window.history.pushState({}, '', basename);
     }
   }, [currentPage]);
 

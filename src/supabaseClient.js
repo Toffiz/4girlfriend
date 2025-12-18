@@ -1,87 +1,41 @@
-// API Client for FastAPI Backend
-// Direct PostgreSQL connection via FastAPI
+// GitHub Gist Storage Client
+// Using GitHub Gist API for persistent photo storage
 
-// Backend configuration - encoded for security
-const getApiConfig = () => {
-  // Base64 encoded API URL for basic obfuscation
-  const encodedLocalUrl = "aHR0cDovL2xvY2FsaG9zdDo4MDAwL2FwaQ=="  // http://localhost:8000/api
-  return {
-    local: atob(encodedLocalUrl),
-    production: 'https://your-backend-url.com/api'  // Update when you deploy
-  }
-}
-
-const API_BASE_URL = getApiConfig().local  // For local development
-// const API_BASE_URL = getApiConfig().production  // For production
-
-// Use backend database or localStorage fallback
-const useBackend = false  // Set to true when backend is running
+const GITHUB_CONFIG = {
+  token: process.env.REACT_APP_GITHUB_TOKEN || '',
+  gistId: process.env.REACT_APP_GIST_ID || '',
+  filename: 'gallery-photos.json'
+};
 
 export const galleryService = {
   // Gallery Photos
   async getPhotos() {
-    if (useBackend) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/photos`)
-        if (!response.ok) throw new Error('Failed to fetch photos')
-        const photos = await response.json()
+    try {
+      if (GITHUB_CONFIG.gistId && GITHUB_CONFIG.token) {
+        const response = await fetch(`https://api.github.com/gists/${GITHUB_CONFIG.gistId}`, {
+          headers: {
+            'Authorization': `token ${GITHUB_CONFIG.token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
         
-        // Convert backend format to frontend format
-        return photos.map(photo => ({
-          id: photo.id,
-          title: photo.title,
-          date: photo.photo_date,
-          time: photo.photo_time,
-          imageUrl: photo.image_data,
-          uploadedAt: photo.created_at
-        }))
-      } catch (error) {
-        console.error('Backend failed, using localStorage:', error)
-        // Fallback to localStorage
+        if (response.ok) {
+          const gist = await response.json();
+          const content = gist.files[GITHUB_CONFIG.filename]?.content;
+          if (content) {
+            return JSON.parse(content);
+          }
+        }
       }
+      return [];
+    } catch (error) {
+      console.error('GitHub Gist error:', error);
+      return [];
     }
-    
-    // localStorage fallback
-    const saved = localStorage.getItem('galleryPhotos')
-    return saved ? JSON.parse(saved) : []
   },
 
   async addPhoto(photoData) {
-    if (useBackend) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/photos`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: photoData.title,
-            photo_date: photoData.photoDate,
-            photo_time: photoData.photoTime,
-            image_data: photoData.imageData
-          })
-        })
-        
-        if (!response.ok) throw new Error('Failed to add photo')
-        const photo = await response.json()
-        
-        // Convert backend format to frontend format
-        return {
-          id: photo.id,
-          title: photo.title,
-          date: photo.photo_date,
-          time: photo.photo_time,
-          imageUrl: photo.image_data,
-          uploadedAt: photo.created_at
-        }
-      } catch (error) {
-        console.error('Backend failed, using localStorage:', error)
-        // Fallback to localStorage
-      }
-    }
-    
-    // localStorage fallback
-    const photos = await this.getPhotos()
+    const photos = await this.getPhotos();
     const newPhoto = {
       id: Date.now(),
       title: photoData.title,
@@ -89,76 +43,80 @@ export const galleryService = {
       time: photoData.photoTime,
       imageUrl: photoData.imageData,
       uploadedAt: new Date().toISOString()
-    }
-    const updatedPhotos = [newPhoto, ...photos]
-    localStorage.setItem('galleryPhotos', JSON.stringify(updatedPhotos))
-    return newPhoto
+    };
+    const updatedPhotos = [newPhoto, ...photos];
+    await this.syncToGist(updatedPhotos);
+    return newPhoto;
   },
 
   async deletePhoto(photoId) {
-    if (useBackend) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/photos/${photoId}`, {
-          method: 'DELETE'
-        })
-        
-        if (!response.ok) throw new Error('Failed to delete photo')
-        return true
-      } catch (error) {
-        console.error('Backend failed, using localStorage:', error)
-        // Fallback to localStorage
-      }
-    }
-    
-    // localStorage fallback
-    const photos = await this.getPhotos()
-    const filtered = photos.filter(photo => photo.id !== photoId)
-    localStorage.setItem('galleryPhotos', JSON.stringify(filtered))
-    return true
-  }
-}
+    const photos = await this.getPhotos();
+    const filtered = photos.filter(photo => photo.id !== photoId);
+    await this.syncToGist(filtered);
+    return true;
+  },
 
-// Auth service
-export const authService = {
-  async checkAuth(username, password) {
-    if (useBackend) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
+  async syncToGist(photos) {
+    if (!GITHUB_CONFIG.token) {
+      console.error('No GitHub token configured');
+      return;
+    }
+
+    const content = JSON.stringify(photos, null, 2);
+    const gistData = {
+      description: 'Gallery photos for 4girlfriend',
+      public: false,
+      files: {
+        [GITHUB_CONFIG.filename]: {
+          content: content
+        }
+      }
+    };
+
+    try {
+      if (GITHUB_CONFIG.gistId) {
+        // Update existing gist
+        const response = await fetch(`https://api.github.com/gists/${GITHUB_CONFIG.gistId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `token ${GITHUB_CONFIG.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(gistData)
+        });
+        
+        if (!response.ok) throw new Error(`Failed to update gist: ${response.statusText}`);
+      } else {
+        // Create new gist
+        const response = await fetch('https://api.github.com/gists', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Authorization': `token ${GITHUB_CONFIG.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ username, password })
-        })
+          body: JSON.stringify(gistData)
+        });
         
-        if (!response.ok) throw new Error('Login request failed')
-        const result = await response.json()
-        return result.success
-      } catch (error) {
-        console.error('Backend auth failed, using local auth:', error)
-        // Fallback to local auth
+        if (!response.ok) throw new Error(`Failed to create gist: ${response.statusText}`);
+        const gist = await response.json();
+        console.log('Created new gist! Add this to GitHub secrets as REACT_APP_GIST_ID:', gist.id);
       }
+    } catch (error) {
+      console.error('Gist sync error:', error);
+      throw error;
     }
-    
-    // Local auth fallback
+  }
+};
+
+export const authService = {
+  async checkAuth(username, password) {
     const validCredentials = {
       username: atob('RGFuaWFs'), 
       password: atob('QWxiaW5h')  
-    }
-    
+    };
     return (username === validCredentials.username && 
-            password === validCredentials.password)
+            password === validCredentials.password);
   }
-}
-
-// Test backend connection
-export const testBackendConnection = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/test-connection`)
-    const result = await response.json()
-    return result.success
-  } catch (error) {
-    console.error('Backend connection test failed:', error)
-    return false
-  }
-}
+};
