@@ -8,26 +8,32 @@ const CLOUDINARY_CONFIG = {
 };
 
 export const galleryService = {
-  // Gallery Photos
+  // Gallery Photos - cached in localStorage, backed by Cloudinary
   async getPhotos() {
     try {
+      // Check localStorage cache first
+      const cached = localStorage.getItem('cloudinary_photos_cache');
+      if (cached) {
+        console.log('Loaded from localStorage cache');
+        return JSON.parse(cached);
+      }
+
+      // No cache - try fetching from Cloudinary
       if (!CLOUDINARY_CONFIG.cloudName) {
-        console.error('Cloudinary not configured');
         return [];
       }
 
-      // Get all images from our folder
+      console.log('Fetching from Cloudinary...');
       const response = await fetch(
         `https://res.cloudinary.com/${CLOUDINARY_CONFIG.cloudName}/image/list/${CLOUDINARY_CONFIG.folder}.json`
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch photos from Cloudinary');
+        console.error('Cloudinary fetch failed. Enable "Resource list" in Settings → Security');
+        return [];
       }
 
       const data = await response.json();
-      
-      // Transform Cloudinary response to our format
       const photos = data.resources.map(resource => ({
         id: resource.public_id,
         title: resource.context?.custom?.title || 'Untitled',
@@ -37,10 +43,15 @@ export const galleryService = {
         uploadedAt: resource.created_at
       }));
 
-      // Sort by upload date (newest first)
-      return photos.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+      const sorted = photos.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+      
+      // Cache it
+      localStorage.setItem('cloudinary_photos_cache', JSON.stringify(sorted));
+      console.log('Cached to localStorage');
+      
+      return sorted;
     } catch (error) {
-      console.error('Cloudinary fetch error:', error);
+      console.error('Error:', error);
       return [];
     }
   },
@@ -80,8 +91,7 @@ export const galleryService = {
       const result = await response.json();
       console.log('✅ Upload successful:', result);
 
-      // Return in our format
-      return {
+      const newPhoto = {
         id: result.public_id,
         title: photoData.title,
         date: photoData.photoDate,
@@ -89,13 +99,16 @@ export const galleryService = {
         imageUrl: result.secure_url,
         uploadedAt: result.created_at
       };
-    } catch (error) {
-      console.error('❌ Cloudinary upload error:', error);
-      throw error;
-    }
-  },
 
-  async deletePhoto(photoId) {
+      // Add to localStorage cache
+      const photos = await this.getPhotos();
+    // Remove from localStorage cache
+    const photos = await this.getPhotos();
+    const filtered = photos.filter(p => p.id !== photoId);
+    localStorage.setItem('cloudinary_photos_cache', JSON.stringify(filtered));
+    
+    console.log('Removed from cache. Still exists on Cloudinary.');
+    return true;nc deletePhoto(photoId) {
     try {
       // Note: Deleting from Cloudinary requires authenticated API calls
       // For now, we'll just remove from display
