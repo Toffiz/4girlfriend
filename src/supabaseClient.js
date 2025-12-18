@@ -101,25 +101,25 @@ export const galleryService = {
       };
 
       // Add to localStorage cache
-      const photos = await this.getPhotos();
+      const existingPhotos = await this.getPhotos();
+      const updated = [newPhoto, ...existingPhotos];
+      localStorage.setItem('cloudinary_photos_cache', JSON.stringify(updated));
+
+      return newPhoto;
+    } catch (error) {
+      console.error('❌ Cloudinary upload error:', error);
+      throw error;
+    }
+  },
+
+  async deletePhoto(photoId) {
     // Remove from localStorage cache
-    const photos = await this.getPhotos();
-    const filtered = photos.filter(p => p.id !== photoId);
+    const existingPhotos = await this.getPhotos();
+    const filtered = existingPhotos.filter(p => p.id !== photoId);
     localStorage.setItem('cloudinary_photos_cache', JSON.stringify(filtered));
     
     console.log('Removed from cache. Still exists on Cloudinary.');
-    return true;nc deletePhoto(photoId) {
-    try {
-      // Note: Deleting from Cloudinary requires authenticated API calls
-      // For now, we'll just remove from display
-      // To implement deletion, you'd need to set up a backend or use Cloudinary's signed deletion
-      console.warn('Photo deletion not implemented yet. Contact admin to remove photos from Cloudinary dashboard.');
-      alert('Photo deletion requires admin access. Please remove manually from Cloudinary dashboard.');
-      return false;
-    } catch (error) {
-      console.error('Delete error:', error);
-      throw error;
-    }
+    return true;
   }
 };
 
