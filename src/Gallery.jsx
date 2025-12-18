@@ -62,35 +62,15 @@ const Gallery = ({ onLogout }) => {
         
         const savedPhoto = await galleryService.addPhoto(photoData);
         
-        // Add to local state
-        const newPhotoForState = {
-          id: savedPhoto.id,
-          title: savedPhoto.title,
-          date: savedPhoto.photo_date,
-          time: savedPhoto.photo_time,
-          imageUrl: savedPhoto.image_data,
-          uploadedAt: savedPhoto.created_at
-        };
-        
-        setPhotos([newPhotoForState, ...photos]);
+        // Add to local state - savedPhoto already has correct structure
+        setPhotos([savedPhoto, ...photos]);
         setNewPhoto({ title: '', date: '', time: '', image: null, imageUrl: '' });
         setShowAddForm(false);
+        
+        alert('Photo saved successfully!');
       } catch (error) {
         console.error('Error adding photo:', error);
-        // Fallback to localStorage
-        const photoData = {
-          id: Date.now(),
-          title: newPhoto.title,
-          date: newPhoto.date,
-          time: newPhoto.time,
-          imageUrl: newPhoto.imageUrl,
-          uploadedAt: new Date().toISOString()
-        };
-        
-        setPhotos([photoData, ...photos]);
-        localStorage.setItem('galleryPhotos', JSON.stringify([photoData, ...photos]));
-        setNewPhoto({ title: '', date: '', time: '', image: null, imageUrl: '' });
-        setShowAddForm(false);
+        alert(`Failed to save photo: ${error.message}`);
       }
     }
   };

@@ -9,12 +9,16 @@ const Debug = ({ onLogout }) => {
 
   useEffect(() => {
     // Check configuration
+    const storedGistId = localStorage.getItem('gistId');
+    const gistId = process.env.REACT_APP_GIST_ID || storedGistId || '';
+    
     const cfg = {
       hasToken: !!process.env.REACT_APP_GITHUB_TOKEN,
       tokenLength: process.env.REACT_APP_GITHUB_TOKEN?.length || 0,
       tokenPreview: process.env.REACT_APP_GITHUB_TOKEN?.substring(0, 10) + '...',
-      hasGistId: !!process.env.REACT_APP_GIST_ID,
-      gistId: process.env.REACT_APP_GIST_ID || 'Not set',
+      hasGistId: !!gistId,
+      gistId: gistId || 'Not set',
+      gistIdSource: gistId ? (process.env.REACT_APP_GIST_ID ? 'env' : 'localStorage') : 'none',
       env: process.env.NODE_ENV
     };
     setConfig(cfg);
@@ -123,6 +127,12 @@ const Debug = ({ onLogout }) => {
               {config.hasGistId ? `✅ ${config.gistId}` : '⚠️ Not set (will auto-create)'}
             </span>
           </div>
+          {config.hasGistId && config.gistIdSource && (
+            <div className="config-item">
+              <span className="config-label">Gist ID Source:</span>
+              <code>{config.gistIdSource}</code>
+            </div>
+          )}
           <div className="config-item">
             <span className="config-label">Environment:</span>
             <code>{config.env}</code>

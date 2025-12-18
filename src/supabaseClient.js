@@ -58,8 +58,9 @@ export const galleryService = {
 
   async syncToGist(photos) {
     if (!GITHUB_CONFIG.token) {
-      console.error('No GitHub token configured');
-      return;
+      const error = 'No GitHub token configured';
+      console.error(error);
+      throw new Error(error);
     }
 
     const content = JSON.stringify(photos, null, 2);
@@ -74,9 +75,13 @@ export const galleryService = {
     };
 
     try {
-      if (GITHUB_CONFIG.gistId) {
+      // Check if we have gist ID in localStorage (for when env var is empty)
+      let gistId = GITHUB_CONFIG.gistId || localStorage.getItem('gistId');
+      
+      if (gistId) {
         // Update existing gist
-        const response = await fetch(`https://api.github.com/gists/${GITHUB_CONFIG.gistId}`, {
+        console.log('Updating gist:', gistId);
+        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `token ${GITHUB_CONFIG.token}`,
@@ -86,9 +91,14 @@ export const galleryService = {
           body: JSON.stringify(gistData)
         });
         
-        if (!response.ok) throw new Error(`Failed to update gist: ${response.statusText}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to update gist: ${response.status} ${errorText}`);
+        }
+        console.log('✅ Gist updated successfully');
       } else {
         // Create new gist
+        console.log('Creating new gist...');
         const response = await fetch('https://api.github.com/gists', {
           method: 'POST',
           headers: {
@@ -99,14 +109,30 @@ export const galleryService = {
           body: JSON.stringify(gistData)
         });
         
-        if (!response.ok) throw new Error(`Failed to create gist: ${response.statusText}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to create gist: ${response.status} ${errorText}`);
+        }
+        
         const gist = await response.json();
-        console.log('Created new gist! Add this to GitHub secrets as REACT_APP_GIST_ID:', gist.id);
+        console.log('✅ Gist created successfully!');
+        console.log('🔑 GIST ID:', gist.id);
+        console.log('📝 Add this to your .env file as REACT_APP_GIST_ID=' + gist.id);
+        console.log('📝 And add it to GitHub secrets: REACT_APP_GIST_ID=' + gist.id);
+        
+        // Store in localStorage so we can use it immediately
+        localStorage.setItem('gistId', gist.id);
+        alert(`Gist created! ID: ${gist.id}\n\nAdd this to your .env file:\nREACT_APP_GIST_ID=${gist.id}`);
       }
     } catch (error) {
-      console.error('Gist sync error:', error);
+      console.error('❌ Gist sync error:', error);
       throw error;
     }
+  },
+
+  // Get current gist ID (from env or localStorage)
+  getGistId() {
+    return GITHUB_CONFIG.gistId || localStorage.getItem('gistId') || null;
   }
 };
 
