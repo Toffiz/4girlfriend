@@ -3,6 +3,7 @@ import FlowerGarden from './FlowerGarden';
 import OurLoveStory from './OurLoveStory';
 import Gallery from './Gallery';
 import Login from './Login';
+import Debug from './Debug';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -25,6 +26,8 @@ function App() {
       setCurrentPage('love-story');
     } else if (path === '/gallery') {
       setCurrentPage('gallery');
+    } else if (path === '/debug') {
+      setCurrentPage('debug');
     } else {
       setCurrentPage('home');
     }
@@ -36,6 +39,8 @@ function App() {
         setCurrentPage('love-story');
       } else if (path === '/gallery') {
         setCurrentPage('gallery');
+      } else if (path === '/debug') {
+        setCurrentPage('debug');
       } else {
         setCurrentPage('home');
       }
@@ -80,6 +85,7 @@ function App() {
       {currentPage === 'home' && <FlowerGarden onLogout={handleLogout} />}
       {currentPage === 'love-story' && <OurLoveStory onLogout={handleLogout} />}
       {currentPage === 'gallery' && <Gallery onLogout={handleLogout} />}
+      {currentPage === 'debug' && <Debug onLogout={handleLogout} />}
     </div>
   );
 }
