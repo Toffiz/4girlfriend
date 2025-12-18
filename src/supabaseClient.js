@@ -1,138 +1,112 @@
-// GitHub Gist Storage Client
-// Using GitHub Gist API for persistent photo storage
+// Cloudinary Storage Client
+// Using Cloudinary for image hosting and metadata storage
 
-const GITHUB_CONFIG = {
-  token: process.env.REACT_APP_GITHUB_TOKEN || '',
-  gistId: process.env.REACT_APP_GIST_ID || '',
-  filename: 'gallery-photos.json'
+const CLOUDINARY_CONFIG = {
+  cloudName: process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || '',
+  uploadPreset: process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || '',
+  folder: '4girlfriend-gallery'
 };
 
 export const galleryService = {
   // Gallery Photos
   async getPhotos() {
     try {
-      if (GITHUB_CONFIG.gistId && GITHUB_CONFIG.token) {
-        const response = await fetch(`https://api.github.com/gists/${GITHUB_CONFIG.gistId}`, {
-          headers: {
-            'Authorization': `token ${GITHUB_CONFIG.token}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-        
-        if (response.ok) {
-          const gist = await response.json();
-          const content = gist.files[GITHUB_CONFIG.filename]?.content;
-          if (content) {
-            return JSON.parse(content);
-          }
-        }
+      if (!CLOUDINARY_CONFIG.cloudName) {
+        console.error('Cloudinary not configured');
+        return [];
       }
-      return [];
+
+      // Get all images from our folder
+      const response = await fetch(
+        `https://res.cloudinary.com/${CLOUDINARY_CONFIG.cloudName}/image/list/${CLOUDINARY_CONFIG.folder}.json`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch photos from Cloudinary');
+      }
+
+      const data = await response.json();
+      
+      // Transform Cloudinary response to our format
+      const photos = data.resources.map(resource => ({
+        id: resource.public_id,
+        title: resource.context?.custom?.title || 'Untitled',
+        date: resource.context?.custom?.date || '',
+        time: resource.context?.custom?.time || '',
+        imageUrl: `https://res.cloudinary.com/${CLOUDINARY_CONFIG.cloudName}/image/upload/${resource.public_id}.${resource.format}`,
+        uploadedAt: resource.created_at
+      }));
+
+      // Sort by upload date (newest first)
+      return photos.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
     } catch (error) {
-      console.error('GitHub Gist error:', error);
+      console.error('Cloudinary fetch error:', error);
       return [];
     }
   },
 
   async addPhoto(photoData) {
-    const photos = await this.getPhotos();
-    const newPhoto = {
-      id: Date.now(),
-      title: photoData.title,
-      date: photoData.photoDate,
-      time: photoData.photoTime,
-      imageUrl: photoData.imageData,
-      uploadedAt: new Date().toISOString()
-    };
-    const updatedPhotos = [newPhoto, ...photos];
-    await this.syncToGist(updatedPhotos);
-    return newPhoto;
-  },
-
-  async deletePhoto(photoId) {
-    const photos = await this.getPhotos();
-    const filtered = photos.filter(photo => photo.id !== photoId);
-    await this.syncToGist(filtered);
-    return true;
-  },
-
-  async syncToGist(photos) {
-    if (!GITHUB_CONFIG.token) {
-      const error = 'No GitHub token configured';
-      console.error(error);
-      throw new Error(error);
-    }
-
-    const content = JSON.stringify(photos, null, 2);
-    const gistData = {
-      description: 'Gallery photos for 4girlfriend',
-      public: false,
-      files: {
-        [GITHUB_CONFIG.filename]: {
-          content: content
-        }
-      }
-    };
-
     try {
-      // Check if we have gist ID in localStorage (for when env var is empty)
-      let gistId = GITHUB_CONFIG.gistId || localStorage.getItem('gistId');
-      
-      if (gistId) {
-        // Update existing gist
-        console.log('Updating gist:', gistId);
-        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `token ${GITHUB_CONFIG.token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(gistData)
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to update gist: ${response.status} ${errorText}`);
-        }
-        console.log('✅ Gist updated successfully');
-      } else {
-        // Create new gist
-        console.log('Creating new gist...');
-        const response = await fetch('https://api.github.com/gists', {
-          method: 'POST',
-          headers: {
-            'Authorization': `token ${GITHUB_CONFIG.token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(gistData)
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to create gist: ${response.status} ${errorText}`);
-        }
-        
-        const gist = await response.json();
-        console.log('✅ Gist created successfully!');
-        console.log('🔑 GIST ID:', gist.id);
-        console.log('📝 Add this to your .env file as REACT_APP_GIST_ID=' + gist.id);
-        console.log('📝 And add it to GitHub secrets: REACT_APP_GIST_ID=' + gist.id);
-        
-        // Store in localStorage so we can use it immediately
-        localStorage.setItem('gistId', gist.id);
-        alert(`Gist created! ID: ${gist.id}\n\nAdd this to your .env file:\nREACT_APP_GIST_ID=${gist.id}`);
+      if (!CLOUDINARY_CONFIG.cloudName || !CLOUDINARY_CONFIG.uploadPreset) {
+        throw new Error('Cloudinary not configured. Check your environment variables.');
       }
+
+      console.log('Uploading to Cloudinary...');
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', photoData.imageData);
+      formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+      formData.append('folder', CLOUDINARY_CONFIG.folder);
+      
+      // Add metadata as context
+      const context = `title=${encodeURIComponent(photoData.title)}|date=${photoData.photoDate}|time=${photoData.photoTime}`;
+      formData.append('context', context);
+
+      // Upload to Cloudinary
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Upload failed: ${errorData.error?.message || response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Upload successful:', result);
+
+      // Return in our format
+      return {
+        id: result.public_id,
+        title: photoData.title,
+        date: photoData.photoDate,
+        time: photoData.photoTime,
+        imageUrl: result.secure_url,
+        uploadedAt: result.created_at
+      };
     } catch (error) {
-      console.error('❌ Gist sync error:', error);
+      console.error('❌ Cloudinary upload error:', error);
       throw error;
     }
   },
 
-  // Get current gist ID (from env or localStorage)
-  getGistId() {
-    return GITHUB_CONFIG.gistId || localStorage.getItem('gistId') || null;
+  async deletePhoto(photoId) {
+    try {
+      // Note: Deleting from Cloudinary requires authenticated API calls
+      // For now, we'll just remove from display
+      // To implement deletion, you'd need to set up a backend or use Cloudinary's signed deletion
+      console.warn('Photo deletion not implemented yet. Contact admin to remove photos from Cloudinary dashboard.');
+      alert('Photo deletion requires admin access. Please remove manually from Cloudinary dashboard.');
+      return false;
+    } catch (error) {
+      console.error('Delete error:', error);
+      throw error;
+    }
   }
 };
 
