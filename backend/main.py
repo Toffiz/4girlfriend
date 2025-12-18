@@ -1,241 +1,109 @@
-# FastAPI Backend for Romantic Website
-# Direct PostgreSQL connection to Supabase
-
-from fastapi import FastAPI, HTTPException, Depends
+# FastAPI Backend with Cloudinary
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import json
-from datetime import datetime
-from typing import List, Optional
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+import base64
 
-# Import secure configuration
-from secure_config import DB_CONFIG
+from secure_config import CLOUDINARY_CONFIG, AUTH_USERNAME, AUTH_PASSWORD
 
-app = FastAPI(title="Romantic Website API", version="1.0.0")
+app = FastAPI(title="4girlfriend API")
 
-# CORS middleware to allow requests from your React app
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=CLOUDINARY_CONFIG['cloud_name'],
+    api_key=CLOUDINARY_CONFIG['api_key'],
+    api_secret=CLOUDINARY_CONFIG['api_secret']
+)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Pydantic models for request/response
-class PhotoCreate(BaseModel):
+# Models
+class PhotoUpload(BaseModel):
     title: str
-    photo_date: str
-    photo_time: str
-    image_data: str  # base64 encoded image
-
-class Photo(BaseModel):
-    id: str
-    title: str
-    photo_date: str
-    photo_time: str
-    image_data: str
-    created_at: str
+    photoDate: str
+    photoTime: str
+    imageData: str
 
 class LoginRequest(BaseModel):
     username: str
     password: str
 
-class LoginResponse(BaseModel):
-    success: bool
-    message: str
-
-# Database connection function with better error handling
-def get_db_connection():
-    try:
-        connection = psycopg2.connect(**DB_CONFIG)
-        return connection
-    except psycopg2.OperationalError as e:
-        if "Network is unreachable" in str(e) or "connection failed" in str(e):
-            raise HTTPException(
-                status_code=503, 
-                detail="Database temporarily unavailable. This is normal during deployment."
-            )
-        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected database error: {str(e)}")
-
-# Initialize database tables with graceful failure
-def init_database():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Create tables in public schema
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS public.gallery_photos (
-                id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                photo_date DATE NOT NULL,
-                photo_time TIME NOT NULL,
-                image_data TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-        """)
-        
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS public.users (
-                id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-        """)
-        
-        # Insert default user if not exists
-        cursor.execute("""
-            INSERT INTO public.users (username, password) 
-            VALUES ('Danial', 'Albina')
-            ON CONFLICT (username) DO NOTHING;
-        """)
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print("Database initialized successfully!")
-        
-    except Exception as e:
-        print(f"Database initialization failed (this is normal during CI/deployment): {e}")
-        print("Backend will still start and handle requests gracefully")
-
-# API Routes
-
-@app.on_event("startup")
-async def startup_event():
-    try:
-        init_database()
-    except Exception as e:
-        print(f"Startup database init failed: {e}")
-        print("Backend starting anyway - database will be initialized on first request")
-
 @app.get("/")
 async def root():
-    return {"message": "Romantic Website API is running! 💕", "status": "healthy"}
+    return {"status": "running"}
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for deployment platforms"""
-    return {"status": "healthy", "database": "checking..."}
-
-@app.get("/api/test-connection")
-async def test_connection():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT NOW();")
-        result = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        return {
-            "success": True, 
-            "message": "Database connection successful!",
-            "current_time": str(result[0])
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Connection failed: {str(e)}",
-            "note": "This is normal during CI/deployment"
-        }
-
-@app.post("/api/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute(
-            "SELECT * FROM public.users WHERE username = %s AND password = %s",
-            (request.username, request.password)
-        )
-        
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        if user:
-            return LoginResponse(success=True, message="Login successful")
-        else:
-            return LoginResponse(success=False, message="Invalid credentials")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/photos", response_model=List[Photo])
+@app.get("/api/photos")
 async def get_photos():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute("""
-            SELECT id::text, title, photo_date::text, photo_time::text, 
-                   image_data, created_at::text
-            FROM public.gallery_photos 
-            ORDER BY created_at DESC
-        """)
-        
-        photos = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        return [Photo(**photo) for photo in photos]
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/photos", response_model=Photo)
-async def add_photo(photo: PhotoCreate):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute("""
-            INSERT INTO public.gallery_photos (title, photo_date, photo_time, image_data)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id::text, title, photo_date::text, photo_time::text, 
-                     image_data, created_at::text
-        """, (photo.title, photo.photo_date, photo.photo_time, photo.image_data))
-        
-        new_photo = cursor.fetchone()
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return Photo(**new_photo)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/photos/{photo_id}")
-async def delete_photo(photo_id: str):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute(
-            "DELETE FROM public.gallery_photos WHERE id = %s",
-            (photo_id,)
+        result = cloudinary.api.resources(
+            type="upload",
+            prefix="4girlfriend-gallery/",
+            max_results=500,
+            context=True
         )
         
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Photo not found")
+        photos = []
+        for resource in result.get('resources', []):
+            context = resource.get('context', {}).get('custom', {})
+            photos.append({
+                'id': resource['public_id'],
+                'title': context.get('title', 'Untitled'),
+                'date': context.get('date', ''),
+                'time': context.get('time', ''),
+                'imageUrl': resource['secure_url'],
+                'uploadedAt': resource['created_at']
+            })
         
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return {"message": "Photo deleted successfully"}
-        
+        return photos
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/photos")
+async def upload_photo(photo: PhotoUpload):
+    try:
+        result = cloudinary.uploader.upload(
+            photo.imageData,
+            folder="4girlfriend-gallery",
+            context=f"title={photo.title}|date={photo.photoDate}|time={photo.photoTime}"
+        )
+        
+        return {
+            'id': result['public_id'],
+            'title': photo.title,
+            'date': photo.photoDate,
+            'time': photo.photoTime,
+            'imageUrl': result['secure_url'],
+            'uploadedAt': result['created_at']
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/photos/{photo_id:path}")
+async def delete_photo(photo_id: str):
+    try:
+        result = cloudinary.uploader.destroy(photo_id)
+        return {"success": result.get('result') == 'ok'}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/login")
+async def login(request: LoginRequest):
+    username_match = request.username == base64.b64decode(AUTH_USERNAME).decode()
+    password_match = request.password == base64.b64decode(AUTH_PASSWORD).decode()
+    
+    if username_match and password_match:
+        return {"success": True}
+    return {"success": False}
 
 if __name__ == "__main__":
     import uvicorn
